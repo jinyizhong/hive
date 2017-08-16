@@ -110,7 +110,7 @@ import org.apache.hive.beeline.cli.CliOptionsProcessor;
 public class BeeLine implements Closeable {
   private static final ResourceBundle resourceBundle =
       ResourceBundle.getBundle(BeeLine.class.getSimpleName());
-  private final BeeLineSignalHandler signalHandler = null;
+  private final BeeLineSignalHandler signalHandler;
   private static final String separator = System.getProperty("line.separator");
   private boolean exit = false;
   private final DatabaseConnections connections = new DatabaseConnections();
@@ -496,6 +496,7 @@ public class BeeLine implements Closeable {
         (this));
     reflector = new Reflector(this);
     this.isBeeLine = isBeeLine;
+    this.signalHandler = new SunSignalHandler(this);
     // attempt to dynamically load signal handler
     /* TODO disable signal handler
     try {
