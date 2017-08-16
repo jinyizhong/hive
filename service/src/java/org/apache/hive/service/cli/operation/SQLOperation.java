@@ -300,12 +300,19 @@ public class SQLOperation extends ExecuteStatementOperation {
     }
   }
 
-  private void cleanup(OperationState state) throws HiveSQLException {
+  private synchronized void cleanup(OperationState state) throws HiveSQLException {
     setState(state);
+
     if (shouldRunAsync()) {
       Future<?> backgroundHandle = getBackgroundHandle();
       if (backgroundHandle != null) {
-        backgroundHandle.cancel(true);
+        boolean success = backgroundHandle.cancel(true);
+        String queryId = confOverlay.get(HiveConf.ConfVars.HIVEQUERYID.varname);
+        if (success) {
+          LOG.info("The running operation has been successfully interrupted: " + queryId);
+        } else if (state == OperationState.CANCELED) {
+          LOG.info("The running operation could not be cancelled, typically because it has already completed normally: " + queryId);
+        }
       }
     }
 
@@ -316,8 +323,13 @@ public class SQLOperation extends ExecuteStatementOperation {
     driver = null;
 
     SessionState ss = SessionState.get();
-    ss.deleteTmpOutputFile();
-    ss.deleteTmpErrOutputFile();
+    if (ss == null) {
+      LOG.warn("Operation seems to be in invalid state, SessionState is null");
+    } else {
+      ss.deleteTmpOutputFile();
+      ss.deleteTmpErrOutputFile();
+    }
+
   }
 
   @Override
